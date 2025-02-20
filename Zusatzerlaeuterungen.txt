@@ -2,4 +2,6 @@ Zusätzliche Fragen
 1.) Javascript: this Context erläutern
 2.) Für Beispiel Kundenauftrag->Positionen erläutern, wie ohne Create depp alle Eingabewerte in OData gespeichert werden können
 3.) Absprünge im Fiori Launchpad, Navigation im FLP, Kataloge im FLP
+4.) SmartField im Dialog nutzen (nach bindElement des Dialogs)
+5.) Wertehilfe mit Annotationen, aber die Suchhilfe soll Suchfelder enthalten für jedes Property
 
