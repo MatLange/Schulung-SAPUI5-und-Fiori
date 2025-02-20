@@ -1,0 +1,41 @@
+METHOD define.
+
+  DATA lo_entity_type TYPE REF TO /iwbep/if_mgw_odata_entity_typ.
+  DATA lo_annotation TYPE REF TO /iwbep/if_mgw_odata_annotatn.
+
+  " Get the entity type
+  lo_entity_type = model->get_entity_type( iv_entity_name = 'YourEntityType' ).
+
+  " Create the LineItem annotation
+  lo_annotation = lo_entity_type->create_annotation( iv_annotation_name = 'com.sap.vocabularies.UI.v1.LineItem' ).
+  lo_annotation->add_collection(
+    iv_property = 'ID'
+    iv_label = 'ID'
+  ).
+  lo_annotation->add_collection(
+    iv_property = 'Name'
+    iv_label = 'Name'
+  ).
+  lo_annotation->add_collection(
+    iv_property = 'Description'
+    iv_label = 'Description'
+  ).
+  lo_annotation->add_collection(
+    iv_property = 'Price'
+    iv_label = 'Price'
+  ).
+
+  " Create the SelectionFields annotation
+  lo_annotation = lo_entity_type->create_annotation( iv_annotation_name = 'com.sap.vocabularies.UI.v1.SelectionFields' ).
+  lo_annotation->add_property( iv_property = 'ID' ).
+  lo_annotation->add_property( iv_property = 'Name' ).
+
+  " Create the PresentationVariant annotation
+  lo_annotation = lo_entity_type->create_annotation( iv_annotation_name = 'com.sap.vocabularies.UI.v1.PresentationVariant' ).
+  lo_annotation->add_property( iv_property = 'SortOrder' ).
+  lo_annotation->add_collection(
+    iv_property = 'Name'
+    iv_descending = abap_false
+  ).
+
+ENDMETHOD.
