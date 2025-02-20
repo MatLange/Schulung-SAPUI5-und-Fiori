@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="1.0"
+    xmlns:edmx="http://schemas.microsoft.com/ado/2007/06/edmx"
+    xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"
+    xmlns:sap="http://www.sap.com/Protocols/SAPData">
+    <edmx:DataServices m:DataServiceVersion="2.0">
+        <Schema Namespace="ZZ_MAL_GET_FLIGHT_SRV" xml:lang="de" sap:schema-version="1"
+            xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
+            <EntityType Name="SFlight" sap:content-version="1">
+                <Key>
+                    <PropertyRef Name="Mandt"/>
+                    <PropertyRef Name="Carrid"/>
+                    <PropertyRef Name="Connid"/>
+                    <PropertyRef Name="Fldate"/>
+                </Key>
+                <Property Name="Mandt" Type="Edm.String" Nullable="false" MaxLength="3" sap:unicode="false" sap:label="Mandant"/>
+                <Property Name="Carrid" Type="Edm.String" Nullable="false" MaxLength="3" sap:unicode="false" sap:label="Fluggesellschaft" sap:updatable="false"/>
+                <Property Name="Connid" Type="Edm.String" Nullable="false" MaxLength="4" sap:unicode="false" sap:label="Flugnummer"/>
+                <Property Name="Fldate" Type="Edm.DateTime" Nullable="false" Precision="7" sap:unicode="false" sap:label="Flugdatum"/>
+                <Property Name="Price" Type="Edm.Decimal" Precision="16" Scale="3" sap:unicode="false" sap:unit="Currency" sap:label="Flugpreis"/>
+                <Property Name="Currency" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="Währ. d. Flugg." sap:semantics="currency-code"/>
+                <Property Name="Planetype" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="Flugzeugtyp"/>
+                <Property Name="Seatsmax" Type="Edm.Int32" sap:unicode="false" sap:label="Max. Belegung Eco."/>
+                <Property Name="Seatsocc" Type="Edm.Int32" sap:unicode="false" sap:label="Belegung Eco."/>
+                <Property Name="Paymentsum" Type="Edm.Decimal" Precision="18" Scale="3" sap:unicode="false" sap:unit="Currency" sap:label="Akt. Summe"/>
+                <Property Name="SeatsmaxB" Type="Edm.Int32" sap:unicode="false" sap:label="Max. Belegung Bus."/>
+                <Property Name="SeatsoccB" Type="Edm.Int32" sap:unicode="false" sap:label="Belegung Bus."/>
+                <Property Name="SeatsmaxF" Type="Edm.Int32" sap:unicode="false" sap:label="Max. Belegung 1st."/>
+                <Property Name="SeatsoccF" Type="Edm.Int32" sap:unicode="false" sap:label="Belegung 1st."/>
+            </EntityType>
+            <EntityContainer Name="ZZ_MAL_GET_FLIGHT_SRV_Entities" m:IsDefaultEntityContainer="true" sap:supported-formats="atom json xlsx">
+                <EntitySet Name="SFlightSet" EntityType="ZZ_MAL_GET_FLIGHT_SRV.SFlight" sap:pageable="false" sap:requires-filter="true" sap:content-version="1"/>
+            </EntityContainer>
+            <Annotation Term="Core.SchemaVersion" String="1.0.0"
+                xmlns="http://docs.oasis-open.org/odata/ns/edm"/>
+            <atom:link rel="self" href="https://COT.RZ.SYS.AOK.DE:44342/sap/opu/odata/sap/ZZ_MAL_GET_FLIGHT_SRV/$metadata"
+                xmlns:atom="http://www.w3.org/2005/Atom"/>
+            <atom:link rel="latest-version" href="https://COT.RZ.SYS.AOK.DE:44342/sap/opu/odata/sap/ZZ_MAL_GET_FLIGHT_SRV/$metadata"
+                xmlns:atom="http://www.w3.org/2005/Atom"/>
+        </Schema>
+    </edmx:DataServices>
+</edmx:Edmx>

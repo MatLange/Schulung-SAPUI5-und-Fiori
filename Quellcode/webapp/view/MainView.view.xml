@@ -1,0 +1,33 @@
+<mvc:View controllerName="odataapp.controller.MainView"
+ displayBlock="true" height="100%"
+	xmlns="sap.m"
+	xmlns:core="sap.ui.core"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:semantic="sap.f.semantic"
+	xmlns:f="sap.f"
+	xmlns:smartFilterBar="sap.ui.comp.smartfilterbar"
+	xmlns:smartTable="sap.ui.comp.smarttable">
+    <Page id="page" title="{i18n>title}">
+        <content>
+		<smartFilterBar:SmartFilterBar id="smartFilterBar" entitySet="SFlightSet" persistencyKey="SmartFilter_Explored">
+			<smartFilterBar:controlConfiguration>
+				<smartFilterBar:ControlConfiguration key="Carrid" index="10" visibleInAdvancedArea="true" preventInitialDataFetchInValueHelpDialog="false"/>
+			</smartFilterBar:controlConfiguration>		
+		</smartFilterBar:SmartFilterBar>
+		<smartTable:SmartTable  id="smartTable" entitySet="SFlightSet" smartFilterId="smartFilterBar"
+			tableType="ResponsiveTable" beforeExport="onBeforeExport"
+			useVariantManagement="false" useTablePersonalisation="true" header="Line Items"
+			showRowCount="true" enableAutoBinding="true"
+			requestAtLeastFields="Carrid,Connid,Fldate,Price,Currency,Planetype,Seatsmax,Seatsocc,SeatsmaxB,SeatsoccB,SeatsmaxF,SeatsoccF" 
+			initiallyVisibleFields="Carrid,Connid,Fldate"
+			demandPopin="true" class="sapUiResponsiveContentPadding">
+				<smartTable:customToolbar>
+					<Toolbar>
+						<ToolbarSpacer />
+						<Button text="Flug anlegen" press="onAddFlightPress" />
+					</Toolbar>
+				</smartTable:customToolbar>
+			</smartTable:SmartTable>
+        </content>
+    </Page>   
+</mvc:View>
