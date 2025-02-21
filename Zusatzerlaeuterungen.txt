@@ -5,3 +5,71 @@ Zusätzliche Fragen
 4.) SmartField im Dialog nutzen (nach bindElement des Dialogs)
 5.) Wertehilfe mit Annotationen, aber die Suchhilfe soll Suchfelder enthalten für jedes Property
 
+Deep entity Create:
+
+
+  method /iwbep/if_mgw_appl_srv_runtime~create_deep_entity.
+
+
+  DATA : ls_deep_entity TYPE ZCL_ZZ_SFLIGHT_MPC_EXT=>ty_deep_entity,
+     lt_item        TYPE TABLE OF ZCL_ZZ_SFLIGHT_MPC_EXT=>ts_spfli,
+     ls_header      TYPE ZCL_ZZ_SFLIGHT_MPC_EXT=>ts_scarr.
+
+* Methods/FMs should be used in case of direct database table update
+* Reading the entity data through the parameter: io_data_provider
+    TRY.
+        CALL METHOD io_data_provider->read_entry_data
+          IMPORTING
+            es_data = ls_deep_entity.
+        IF ls_deep_entity IS NOT INITIAL.
+          ls_header = CORRESPONDING #( ls_deep_entity ).
+          ls_header-mandt = sy-mandt.
+          MODIFY scarr FROM ls_header.
+          IF sy-subrc = 0.
+            lt_item[] = CORRESPONDING #( ls_deep_entity-headertoitem[] ).
+            DO lines( lt_item[] ) TIMES.
+              lt_item[ sy-index ]-mandt = sy-mandt.
+            ENDDO.
+            TRY.
+                INSERT spfli FROM TABLE lt_item ACCEPTING DUPLICATE KEYS.
+                IF sy-subrc = 4.                     "To overcome the dump
+                  CALL METHOD me->copy_data_to_ref   "Populating the ER_DEEP_ENTITY
+                    EXPORTING
+                      is_data = ls_deep_entity
+                    CHANGING
+                      cr_data = er_deep_entity.
+                ENDIF.
+              CATCH cx_root.
+                "Error during insert
+            ENDTRY.
+          ENDIF.
+        ENDIF.
+      CATCH /iwbep/cx_mgw_tech_exception.
+        "Do Nothing[
+    ENDTRY.
+  endmethod.
+
+    DATA lo_entity_type TYPE REF TO /iwbep/if_mgw_odata_entity_typ.
+
+    super->define( ).
+
+* Header Entity Name
+    lo_entity_type = model->get_entity_type( iv_entity_name = 'Scarr' ).
+* MPC_EXT Deep Structure Name
+    lo_entity_type->bind_structure( iv_structure_name = 'ZCL_ZZ_SFLIGHT_MPC_EXT=>ty_deep_entity' ).
+
+
+
+*--------------------------------------------------------------------*
+* Deep Structure
+*--------------------------------------------------------------------*
+    begin of TY_DEEP_ENTITY,
+              MANDT        type ts_scarr-mandt,
+              CARRID       type ts_scarr-carrid,
+              CARRNAME type ts_scarr-carrname,
+              CURRCODE type ts_scarr-currcode,
+              URL      type ts_scarr-url,
+* Navigation property name should be used otherwise empty records will be shown
+             headertoitem type table of ts_spfli with default key,
+     end of TY_DEEP_ENTITY.
+*--------------------------------------------------------------------*​​
