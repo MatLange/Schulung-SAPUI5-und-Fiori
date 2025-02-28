@@ -8,12 +8,11 @@ Zusätzliche Fragen
 Deep entity Create:
 
 
-  method /iwbep/if_mgw_appl_srv_runtime~create_deep_entity.
-
-
+  method /IWBEP/IF_MGW_APPL_SRV_RUNTIME~CREATE_DEEP_ENTITY.
   DATA : ls_deep_entity TYPE ZCL_ZZ_SFLIGHT_MPC_EXT=>ty_deep_entity,
      lt_item        TYPE TABLE OF ZCL_ZZ_SFLIGHT_MPC_EXT=>ts_spfli,
-     ls_header      TYPE ZCL_ZZ_SFLIGHT_MPC_EXT=>ts_scarr.
+     ls_header      TYPE ZCL_ZZ_SFLIGHT_MPC_EXT=>ts_scarr,
+     lt_spfli       TYPE TABLE OF spfli.
 
 * Methods/FMs should be used in case of direct database table update
 * Reading the entity data through the parameter: io_data_provider
@@ -27,18 +26,36 @@ Deep entity Create:
           MODIFY scarr FROM ls_header.
           IF sy-subrc = 0.
             lt_item[] = CORRESPONDING #( ls_deep_entity-headertoitem[] ).
-            DO lines( lt_item[] ) TIMES.
-              lt_item[ sy-index ]-mandt = sy-mandt.
-            ENDDO.
+            LOOP AT lt_item ASSIGNING field-symbol(<ls_item>).
+              data(ls_db_spfli) = value spfli(
+                                            mandt = sy-mandt
+                                            carrid = conv s_carr_id( |{ conv s_carr_id( <ls_item>-carrid ) alpha = in }| )
+                                            connid = conv s_conn_id( |{ conv s_conn_id( <ls_item>-connid ) alpha = in }| )
+                                            countryfr = conv land1( |{ conv land1( <ls_item>-countryfr ) alpha = in }| )
+                                            cityfrom = conv s_from_cit( |{ conv s_from_cit( <ls_item>-cityfrom ) alpha = in }| )
+                                            airpfrom = conv s_fromairp( |{ conv s_fromairp( <ls_item>-airpfrom ) alpha = in }| )
+                                            countryto = conv land1( |{ conv land1( <ls_item>-countryto ) alpha = in }| )
+                                            cityto = conv s_to_city( |{ conv s_to_city( <ls_item>-cityto ) alpha = in }| )
+                                            airpto = conv s_toairp( |{ conv s_toairp( <ls_item>-airpto ) alpha = in }| )
+                                            fltime = conv s_fltime( |{ conv s_fltime( <ls_item>-fltime ) }| )
+                                            deptime = conv s_dep_time( |{ conv s_dep_time( <ls_item>-deptime ) }| )
+                                            arrtime = conv s_arr_time( |{ conv s_arr_time( <ls_item>-arrtime ) }| )
+                                            distance = conv s_distance( |{ conv s_distance( <ls_item>-distance ) }| )
+                                            distid = conv s_distid( |{ conv s_distid( <ls_item>-distid ) }| )
+                                            fltype = conv s_fltype( |{ conv s_fltype( <ls_item>-fltype ) }| )
+                                            period = conv s_period( |{ conv s_fltype( <ls_item>-period ) }| )
+                                            ).
+              append ls_db_spfli to lt_spfli.
+            ENDLOOP.
             TRY.
                 INSERT spfli FROM TABLE lt_item ACCEPTING DUPLICATE KEYS.
-                IF sy-subrc = 4.                     "To overcome the dump
+                "IF sy-subrc = 4.                     "To overcome the dump
                   CALL METHOD me->copy_data_to_ref   "Populating the ER_DEEP_ENTITY
                     EXPORTING
                       is_data = ls_deep_entity
                     CHANGING
                       cr_data = er_deep_entity.
-                ENDIF.
+                "ENDIF.
               CATCH cx_root.
                 "Error during insert
             ENDTRY.
@@ -73,3 +90,252 @@ Deep entity Create:
              headertoitem type table of ts_spfli with default key,
      end of TY_DEEP_ENTITY.
 *--------------------------------------------------------------------*​​
+
+
+
+  method SCARRSET_GET_ENTITYSET.
+    try.
+        select * from scarr into table et_entityset.
+      catch /iwbep/cx_mgw_busi_exception .
+      catch /iwbep/cx_mgw_tech_exception .
+    endtry.
+  endmethod.
+
+
+  method SFLIGHTSET_CREATE_ENTITY.
+ io_data_provider->read_entry_data( importing es_data = er_entity ).
+
+    if er_entity-carrid is initial or er_entity-connid is initial or er_entity-fldate is initial.
+      "Schlüsselfelder leer - wird einfach ignoriert
+      return.
+    endif.
+
+    SELECT SINGLE carrid
+      FROM sflight
+      INTO @DATA(lv_carrid)
+      WHERE carrid = @er_entity-carrid
+        AND fldate = @er_entity-fldate
+        AND connid = @er_entity-connid.
+    IF sy-subrc = 0.
+      "Datensatz bereits vorhanden.
+      MESSAGE e028(/gkv/rm90_ud) WITH lv_carrid INTO DATA(lv_dummy_msg).
+      "/gkv/rm50_cl_odata_tools=>raise_error_message( CAST #( /iwbep/if_mgw_conv_srv_runtime~get_message_container( ) ) ).
+      "raise exception
+      RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+        EXPORTING
+          "http_status_code  = iv_http_status_code
+          textid            = /iwbep/cx_mgw_tech_exception=>internal_error
+          message_container = CAST #( /iwbep/if_mgw_conv_srv_runtime~get_message_container( ) ).
+    ENDIF.
+
+
+
+    "Mappen in Datenbank-Update-Struktur
+    data(ls_db_update) = value sflight(          carrid      = er_entity-carrid
+                                                 connid      = er_entity-connid
+                                                 fldate     = er_entity-fldate
+                                                 price      = er_entity-price
+                                                 currency   = er_entity-currency
+                                                 planetype  = er_entity-planetype
+                                                 seatsmax   = er_entity-seatsmax
+                                                 seatsocc   = er_entity-seatsocc
+                                                 paymentsum = er_entity-paymentsum
+                                                 seatsmax_b = er_entity-seatsmax_b
+                                                 seatsocc_b = er_entity-seatsocc_b
+                                                 seatsmax_f = er_entity-seatsmax_f
+                                                 seatsocc_f = er_entity-seatsocc_f ).
+
+    "Create
+    try.
+        modify sflight from ls_db_update.
+      catch /iwbep/cx_mgw_busi_exception .
+      catch /iwbep/cx_mgw_tech_exception .
+    endtry.
+  endmethod.
+
+
+  method SFLIGHTSET_CREATE_ENTITY.
+ io_data_provider->read_entry_data( importing es_data = er_entity ).
+
+    if er_entity-carrid is initial or er_entity-connid is initial or er_entity-fldate is initial.
+      "Schlüsselfelder leer - wird einfach ignoriert
+      return.
+    endif.
+
+    SELECT SINGLE carrid
+      FROM sflight
+      INTO @DATA(lv_carrid)
+      WHERE carrid = @er_entity-carrid
+        AND fldate = @er_entity-fldate
+        AND connid = @er_entity-connid.
+    IF sy-subrc = 0.
+      "Datensatz bereits vorhanden.
+      MESSAGE e028(/gkv/rm90_ud) WITH lv_carrid INTO DATA(lv_dummy_msg).
+      "/gkv/rm50_cl_odata_tools=>raise_error_message( CAST #( /iwbep/if_mgw_conv_srv_runtime~get_message_container( ) ) ).
+      "raise exception
+      RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+        EXPORTING
+          "http_status_code  = iv_http_status_code
+          textid            = /iwbep/cx_mgw_tech_exception=>internal_error
+          message_container = CAST #( /iwbep/if_mgw_conv_srv_runtime~get_message_container( ) ).
+    ENDIF.
+
+
+
+    "Mappen in Datenbank-Update-Struktur
+    data(ls_db_update) = value sflight(          carrid      = er_entity-carrid
+                                                 connid      = er_entity-connid
+                                                 fldate     = er_entity-fldate
+                                                 price      = er_entity-price
+                                                 currency   = er_entity-currency
+                                                 planetype  = er_entity-planetype
+                                                 seatsmax   = er_entity-seatsmax
+                                                 seatsocc   = er_entity-seatsocc
+                                                 paymentsum = er_entity-paymentsum
+                                                 seatsmax_b = er_entity-seatsmax_b
+                                                 seatsocc_b = er_entity-seatsocc_b
+                                                 seatsmax_f = er_entity-seatsmax_f
+                                                 seatsocc_f = er_entity-seatsocc_f ).
+
+    "Create
+    try.
+        modify sflight from ls_db_update.
+      catch /iwbep/cx_mgw_busi_exception .
+      catch /iwbep/cx_mgw_tech_exception .
+    endtry.
+  endmethod.
+
+  method SFLIGHTSET_GET_ENTITY.
+   TRY.
+*        CALL METHOD super->sflightset_get_entity
+*          EXPORTING
+*            iv_entity_name      = iv_entity_name
+*            iv_entity_set_name  = iv_entity_set_name
+*            iv_source_name      = iv_source_name
+*            it_key_tab          = it_key_tab
+*            io_request_object   = io_request_object
+*            io_tech_request_context = io_tech_request_context
+*            it_navigation_path  = it_navigation_path
+*          IMPORTING
+*            er_entity           = er_entity
+*            es_response_context = es_response_context.
+
+
+    LOOP AT it_key_tab ASSIGNING FIELD-SYMBOL(<ls_keys>).
+      CASE <ls_keys>-name.
+        WHEN 'Carrid'.
+          er_entity-carrid = CONV S_CARR_ID( |{ CONV S_CARR_ID( <ls_keys>-value ) ALPHA = IN }| ).
+        WHEN 'Connid'.
+          er_entity-connid = CONV S_CONN_ID( |{ CONV S_CONN_ID( <ls_keys>-value ) ALPHA = IN }| ).
+        WHEN 'Fldate'.
+          er_entity-fldate = CONV S_DATE( |{ CONV S_DATE( <ls_keys>-value ) }| ).
+      ENDCASE.
+    ENDLOOP.
+
+    if er_entity-carrid is initial or er_entity-connid is initial or er_entity-fldate is initial.
+      "Schlüsselfelder leer - wird einfach ignoriert
+      return.
+    endif.
+
+    SELECT SINGLE carrid
+      FROM sflight
+      INTO @er_entity
+      WHERE carrid = @er_entity-carrid
+        AND fldate = @er_entity-fldate
+        AND connid = @er_entity-connid.
+
+      CATCH /iwbep/cx_mgw_busi_exception .
+      CATCH /iwbep/cx_mgw_tech_exception .
+    ENDTRY.
+  endmethod.
+
+
+  method SFLIGHTSET_GET_ENTITYSET.
+    try.
+        select * from sflight into table et_entityset WHERE carrid NE ''.
+      catch /iwbep/cx_mgw_busi_exception .
+      catch /iwbep/cx_mgw_tech_exception .
+    endtry.
+  endmethod.
+
+
+  method SFLIGHTSET_UPDATE_ENTITY.
+   io_data_provider->read_entry_data( importing es_data = er_entity ).
+
+    LOOP AT it_key_tab ASSIGNING FIELD-SYMBOL(<ls_keys>).
+      CASE <ls_keys>-name.
+        WHEN 'Carrid'.
+          er_entity-carrid = CONV S_CARR_ID( |{ CONV S_CARR_ID( <ls_keys>-value ) ALPHA = IN }| ).
+        WHEN 'Connid'.
+          er_entity-connid = CONV S_CONN_ID( |{ CONV S_CONN_ID( <ls_keys>-value ) ALPHA = IN }| ).
+        WHEN 'Fldate'.
+          er_entity-fldate = CONV S_DATE( |{ CONV S_DATE( <ls_keys>-value ) }| ).
+      ENDCASE.
+    ENDLOOP.
+
+    if er_entity-carrid is initial or er_entity-connid is initial or er_entity-fldate is initial.
+      "Schlüsselfelder leer - wird einfach ignoriert
+      return.
+    endif.
+
+    SELECT SINGLE carrid
+      FROM sflight
+      INTO @DATA(lv_carrid)
+      WHERE carrid = @er_entity-carrid
+        AND fldate = @er_entity-fldate
+        AND connid = @er_entity-connid.
+    IF sy-subrc <> 0.
+      "Datensatz existiert nicht
+      MESSAGE e028(/gkv/rm90_ud) WITH lv_carrid INTO DATA(lv_dummy_msg).
+      "/gkv/rm50_cl_odata_tools=>raise_error_message( CAST #( /iwbep/if_mgw_conv_srv_runtime~get_message_container( ) ) ).
+      "raise exception
+      RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+        EXPORTING
+          "http_status_code  = iv_http_status_code
+          textid            = /iwbep/cx_mgw_tech_exception=>internal_error
+          message_container = CAST #( /iwbep/if_mgw_conv_srv_runtime~get_message_container( ) ).
+    ENDIF.
+
+
+    "Mappen in Datenbank-Update-Struktur
+    data(ls_db_update) = value sflight(          carrid      = er_entity-carrid
+                                                 connid      = er_entity-connid
+                                                 fldate      = er_entity-fldate
+                                                 price      = er_entity-price
+                                                 currency   = er_entity-currency
+                                                 planetype  = er_entity-planetype
+                                                 seatsmax   = er_entity-seatsmax
+                                                 seatsocc   = er_entity-seatsocc
+                                                 paymentsum = er_entity-paymentsum
+                                                 seatsmax_b = er_entity-seatsmax_b
+                                                 seatsocc_b = er_entity-seatsocc_b
+                                                 seatsmax_f = er_entity-seatsmax_f
+                                                 seatsocc_f = er_entity-seatsocc_f ).
+
+    "Update
+    TRY.
+    modify sflight from ls_db_update.
+      CATCH /iwbep/cx_mgw_busi_exception .
+      CATCH /iwbep/cx_mgw_tech_exception .
+    ENDTRY.
+  endmethod.
+
+
+  method spfliset_get_entityset.
+    loop at it_filter_select_options assigning field-symbol(<ls_filter_select_options>).
+      case <ls_filter_select_options>-property.
+        when 'Carrid'.
+          DATA(lt_selopt_carrid) = <ls_filter_select_options>-select_options.
+        when 'Connid'.
+          DATA(lt_selopt_connid) = <ls_filter_select_options>-select_options.
+      endcase.
+    endloop.
+    try.
+        select * from spfli into table @data(lt_entityset)
+          WHERE carrid in @lt_selopt_carrid AND
+          connid in @lt_selopt_connid.
+        move-corresponding lt_entityset to et_entityset.
+      catch /iwbep/cx_mgw_busi_exception .
+      catch /iwbep/cx_mgw_tech_exception .
+    endtry.
+  endmethod.
