@@ -339,3 +339,251 @@ Deep entity Create:
       catch /iwbep/cx_mgw_tech_exception .
     endtry.
   endmethod.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+sap.ui.define([
+	'sap/ui/core/mvc/Controller',
+	'sap/ui/model/json/JSONModel',
+	"sap/m/MessageToast",
+	"sap/m/MessageBox",
+	"sap/ui/core/Fragment",
+	"sap/ui/model/Filter",
+	"sap/ui/model/FilterOperator"    
+], function (Controller, JSONModel, MessageToast, MessageBox, Fragment, Filter, FilterOperator) {
+        "use strict";
+
+        return Controller.extend("odataapp.controller.MainView", {
+            
+            onInit: function () {
+                this._oWizard = this.byId("CreateProductWizard"); // Initialisiert den Wizard
+                this._oNavContainer = this.byId("wizardNavContainer"); // Initialisiert den Navigationscontainer
+                this._oWizardContentPage = this.byId("wizardContentPage"); // Initialisiert die Wizard-Inhaltsseite
+                
+                // Lade die Übersichtsseite (zum Überprüfen der eingegebenen Daten) - asynchron per Fragment
+                Fragment.load({
+                    name: "odataapp.view.ReviewPage",
+                    controller: this
+                }).then(function (oWizardReviewPage) {
+                    this._oWizardReviewPage = oWizardReviewPage;
+                    // Das Fragment - Die geladene Page dem Navigationscontainer hinzufügen, dadurch kann man nun dorthin navigieren
+                    this._oNavContainer.addPage(this._oWizardReviewPage);
+                }.bind(this));
+
+                var oModel = this.getOwnerComponent().getModel();
+                this.getView().setModel(oModel); // Setzt das Modell für die Ansicht
+                if (oModel.isMetadataLoadingFailed())  {
+                    MessageBox.error("Fehler beim Laden der OData Metadaten. Ist der Service erreichbar und verfügbar?");
+                }
+                oModel.attachMetadataFailed(null, function() {
+                    MessageBox.error("Fehler beim Laden der OData Metadaten. Ist der Service erreichbar und verfügbar?");
+                });
+            },
+
+            onAfterRendering: function() {
+                var oModel = this.getOwnerComponent().getModel();
+                var oNewContext = oModel.createEntry("/ScarrSet"); // Erstellt einen neuen Eintrag im Modell
+                var sPath = oNewContext.getPath();
+                this.getView().bindElement(sPath); // Bindet das Element an den neuen Eintrag
+            },
+
+            onTableAddRow: function () {
+                var oTableRowContext = this.getView().getModel().createEntry("/SpfliSet"); // Erstellt einen neuen Eintrag für die Tabelle
+                // Vorlage der Items-Aggregation abrufen
+                var oTemplate = this.getView().byId("smartTable").getTable().getBindingInfo("items").template;
+
+                // Vorlage klonen
+                var oNewItem = oTemplate.clone();
+
+                // Den Binding-Kontext des neuen Elements auf den erstellten Eintrag setzen
+                oNewItem.setBindingContext(oTableRowContext);
+
+                // Das neue Element zur Tabelle hinzufügen
+                this.getView().byId("smartTable").getTable().addItem(oNewItem);
+            },    
+
+            onTableRowDelete: function(oEvent) {
+                var oItem = oEvent.getParameter("listItem");
+                var oContext = oItem.getBindingContext();
+                oItem.unbindContext(); // Entbindet den Kontext des Elements
+                this.getView().getModel().deleteCreatedEntry(oContext); // Löscht den erstellten Eintrag
+                this.getView().byId("smartTable").getTable().removeItem(oItem); // Entfernt das Element aus der Tabelle
+            },
+            
+            onBeforeRebindSmartTable: function(oEvent) {
+                var mBindingParams = oEvent.getParameter("bindingParams");
+                // Setze absichtlich einen Filter auf leeren Eintrag -  für initiales Datenladen der Smarttable, 
+                // damit keine aktuellen Einträge aus dem Entityset aus dem Backend angezeigt werden, sondern die SmartTable am Anfang leer ist
+                mBindingParams.filters.push(
+                    new Filter(
+                        "Carrid",
+                        FilterOperator.EQ,
+                        ''                    )
+                );
+            },            
+
+            onAdditionalInfoValidation: function () {
+                let bError = false;
+                const aTableRows = this.getView().byId("smartTable").getTable().getItems();
+                for (var oRow of aTableRows) {
+                    var aCells = oRow.getCells();
+                    for (var oCell of aCells) {
+                        if (oCell.getValueState() === "Error") {
+                            bError = true;
+                            return;
+                        }
+                    }
+                }
+                if (bError) {
+                    this._oWizard.invalidateStep(this.byId("ScheduleFlightsStep")); // Ungültig machen des Schritts im Wizard
+                } else {
+                    this._oWizard.validateStep(this.byId("ScheduleFlightsStep")); // Validieren des Schritts im Wizard
+                }
+            },
+
+            onSmartTableFieldChange: function(oEvent) {
+                var aRows = oEvent.getSource().getTable().getItems();
+                for (var oRow of aRows) {
+                    var aCells = oRow.getCells();
+                    for (var oCell of aCells) {
+                        if (oCell.getValueState() === "Error") {
+                            this.byId("ScheduleFlightsStep").setValidated(false); // Setzt den Schritt als nicht validiert
+                            return;
+                        }
+                    }
+                }
+                this.byId("ScheduleFlightsStep").setValidated(true); // Setzt den Schritt als validiert
+            },
+
+            onAfterNavigate: function (oEvent) {
+                var aTableRows = this.getView().byId("smartTable").getTable().getItems();
+                const oReviewTable = sap.ui.getCore().byId("smartTableReview").getTable();    
+                oReviewTable.removeAllItems(); // Entfernt alle Elemente aus der Überprüfungstabelle
+                for (var iRowIndex in aTableRows) {
+                    var oRow = aTableRows[iRowIndex];
+                    var oTemplate = oReviewTable.getBindingInfo("items").template;
+                    var oNewRowItem = oTemplate.clone();
+                    oNewRowItem.setBindingContext(oRow.getBindingContext());
+                    oReviewTable.addItem(oNewRowItem); // Fügt das neue Element zur Überprüfungstabelle hinzu
+                }
+            },
+    
+            onWizardCompletedHandler: function () {
+                var bError = false;
+                const aTableRows = this.getView().byId("smartTable").getTable().getItems();
+                for (var oRow of aTableRows) {
+                    var aCells = oRow.getCells();
+                    for (var oCell of aCells) {
+                        if (oCell.getValueState() === "Error") {
+                            bError = true;
+                        }
+                    }
+                }
+                if (bError) {
+                    sap.m.MessageBox.error("Bitte korrigieren Sie Ihre Eingaben."); // Zeigt eine Fehlermeldung an
+                } else {
+                    var oTable = this.getView().byId("smartTableReview");
+                    this._oNavContainer.to(this._oWizardReviewPage); // Navigiert zur Überprüfungsseite
+                }
+            },
+    
+            onEditStepOne: function () {
+                this._handleNavigationToStep(0); // Navigiert zum ersten Schritt
+            },
+    
+            onEditStepTwo: function () {
+                this._handleNavigationToStep(1); // Navigiert zum zweiten Schritt
+            },
+    
+            onEditStepThree: function () {
+                this._handleNavigationToStep(2); // Navigiert zum dritten Schritt
+            },
+
+            backToWizardContent: function () {
+                this._oNavContainer.backToPage(this._oWizardContentPage.getId()); // Navigiert zurück zur Wizard-Inhaltsseite
+            },            
+    
+            _handleNavigationToStep: function (iStepNumber) {
+                var fnAfterNavigate = function () {
+                    this._oWizard.goToStep(this._oWizard.getSteps()[iStepNumber]); // Geht zum angegebenen Schritt im Wizard
+                    this._oNavContainer.detachAfterNavigate(fnAfterNavigate);
+                }.bind(this);
+    
+                this._oNavContainer.attachAfterNavigate(fnAfterNavigate);
+                this.backToWizardContent(); // Navigiert zurück zur Wizard-Inhaltsseite
+            },
+    
+            _handleMessageBoxOpen: function (sMessage, sMessageBoxType, fnFunctionAfterClose) {
+                MessageBox[sMessageBoxType](sMessage, {
+                    actions: [MessageBox.Action.YES, MessageBox.Action.NO],
+                    onClose: fnFunctionAfterClose
+                });
+            },
+
+            onHandleWizardCancel: function () {
+                this._handleMessageBoxOpen("Sind Sie sicher, dass Sie abbrechen wollen?", "warning", this.onCancel.bind(this)); // Öffnet eine Bestätigungsnachricht
+            },
+    
+            onHandleWizardSubmit: function () {
+                this._handleMessageBoxOpen("Sind Sie sicher, dass Sie die Daten abschicken wollen?", "confirm", this.onConfirmSubmit.bind(this)); // Öffnet eine Bestätigungsnachricht
+            },
+
+            onCancel: function(oAction) {
+                if (oAction === MessageBox.Action.NO) {
+                    return;
+                }                
+                this._handleNavigationToStep(0); // Navigiert zum ersten Schritt
+                this._oWizard.discardProgress(this._oWizard.getSteps()[0]); // Verwirft den Fortschritt des Wizards
+            },
+
+            onConfirmSubmit: function(oAction) {
+                if (oAction === MessageBox.Action.NO) {
+                    return;
+                }
+
+                var oModel = this.getView().getModel();
+                var oDeepEntityEntry = {};
+                var aHeaderToItem = [];
+                var oChanges = oModel.getPendingChanges();    
+                for (var sKey in oChanges) {
+                    if (sKey.includes("SpfliSet")) {
+                        aHeaderToItem.push(oChanges[sKey]); // Fügt die Änderungen zur Header-Item-Liste hinzu
+                    } else if (sKey.includes("ScarrSet")) {
+                        oDeepEntityEntry = oChanges[sKey]; // Setzt den Deep Entity Eintrag
+                    }
+                }
+                oDeepEntityEntry.HeaderToItem = aHeaderToItem;
+
+                // Ladeicon einschalten
+                this.getView().setBusy(true);
+                oModel.create("/ScarrSet", oDeepEntityEntry, {
+                    success:  function(oData)  {
+                        MessageBox["information"]("Create war Erfolgreich"); // Zeigt eine Erfolgsnachricht an
+                        oModel.resetPendingChanges(); // Setzt die ausstehenden Änderungen zurück
+                        // Ladeicon ausschalten
+                        this.getView().setBusy(false);
+                    },
+                    error: function (oError) {
+                        MessageBox["information"]("Fehler beim Create mit Deep Entity."); // Zeigt eine Fehlermeldung an
+                        oModel.resetPendingChanges(); // Setzt die ausstehenden Änderungen zurück
+                        // Ladeicon ausschalten
+                        this.getView().setBusy(false);
+                    }
+                });	                     
+
+            }
+
+        });
+    });
