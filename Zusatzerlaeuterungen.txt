@@ -587,3 +587,58 @@ sap.ui.define([
 
         });
     });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  method get_odata_service_authobj.
+    data ls_service_info       type /iwbep/if_mgw_med_provider=>ty_s_service_info.
+    data lv_service_tadir_name type usobhash-obj_name.
+    data lv_usobh_name         type usobhash-name.
+    data lv_usobh_type         type usobhash-type.
+
+"   Ermittle den technical name und die Version des OData service
+    select single * from /iwbep/i_mgw_srh into @data(ls_srh)  "#EC CI_NOORDER
+      where external_name eq @IV_SERVICE_EXTERNAL_NAME. "'TB37_A_EPA_APP_SRV'.
+
+    IF sy-subrc <> 0.
+      RETURN.
+    ENDIF.
+
+    data(lv_service_technical_name) = ls_srh-technical_name.
+    data(lv_service_version) = ls_srh-version.
+
+    concatenate lv_service_technical_name lv_service_version into lv_service_tadir_name respecting blanks.
+
+    call function 'AUTH_TRACE_INTERN_HASH'
+      exporting
+        pgmid                     = 'R3TR'
+        object                    = 'IWSV'
+        obj_name                  = lv_service_tadir_name
+        service_type              = ''
+        service                   = ''
+      importing
+        hash_value                = ev_auth_name
+        hash_value_type           = ev_auth_type
+      exceptions
+        hash_error                = 1
+        hash_invalid_input        = 2
+        hash_too_long             = 3
+        kernel_function_not_found = 4
+        others                    = 5.
+  endmethod.
