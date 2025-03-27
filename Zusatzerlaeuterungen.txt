@@ -1,4 +1,15 @@
+SmartTable Spaltenbreite (AutoColumnWidth in unserer Version nicht vorhanden, via Annotationen z.B. UI.LineItem kann ich auch keine Spaltenbreite angeben)
+Ich habe derzeit nur den Weg über core:CustomData key="p13nData" gefunden … aber ist das wirklich der einzig richtige bzw. sinnvolle in unserem Umfeld?
 
+ 
+
+Best-Practice z.B. für automatische Datenermittlung, wenn z.B. Materialnummer oder Auftraggeber eingegeben und daraufhin weitere Daten (z.B. Materialtext) automatisch ermittelt und an das Modell übergeben werden sollen
+ 
+
+Annotation Value Lists … Angezeigte Spalten in Suchhilfe und Weitergabe der ermittelten Daten an weitere Felder, ohne dass diese in der Tabelle der Suchhilfe angezeigt werden
+ 
+
+Usw.
 https://taos.saf.schleifring.site/#/?conference=00421577&callTag=guest&pin=966283
 
 
