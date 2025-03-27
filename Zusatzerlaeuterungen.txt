@@ -1,3 +1,8 @@
+
+https://taos.saf.schleifring.site/#/?conference=00421577&callTag=guest&pin=966283
+
+
+
 Zusätzliche Fragen
 1.) Javascript: this Context erläutern
 2.) Für Beispiel Kundenauftrag->Positionen erläutern, wie ohne Create depp alle Eingabewerte in OData gespeichert werden können
