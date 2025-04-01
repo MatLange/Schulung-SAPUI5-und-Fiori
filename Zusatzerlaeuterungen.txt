@@ -1,3 +1,5 @@
+https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZmQ0MDhkMmUtZGM5OS00NDg3LWFhZDktOTkzZjlmMjE5YWZj%40thread.v2/0?context=%7b%22Tid%22%3a%2270db1c96-8b99-41aa-bd4d-dbb99e7ab6ca%22%2c%22Oid%22%3a%22bfd3b5ed-fa72-48ac-88c8-483892dcd442%22%7d
+
 SmartTable Spaltenbreite (AutoColumnWidth in unserer Version nicht vorhanden, via Annotationen z.B. UI.LineItem kann ich auch keine Spaltenbreite angeben)
 Ich habe derzeit nur den Weg über core:CustomData key="p13nData" gefunden … aber ist das wirklich der einzig richtige bzw. sinnvolle in unserem Umfeld?
 
